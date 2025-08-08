@@ -1,0 +1,13 @@
+img_urls = [
+            r"https://ts1.tc.mm.bing.net/th/id/R-C.d2b3a4779fd2b9af70103d485bc8b664?rik=Xm7zutXMpsp91Q&riu=http%3a%2f%2fup.deskcity.org%2fpic_source%2fd2%2fb3%2fa4%2fd2b3a4779fd2b9af70103d485bc8b664.jpg&ehk=%2fh%2fipXq8Ihn81SbQdkphnzweLFLUGfD1%2fXncDcbLgRE%3d&risl=&pid=ImgRaw&r=0",
+            r"https://img.keaitupian.cn/newupload/09/1664359738368206.jpg"
+        ]
+
+img_urls = [
+            r"C:\Users\EDY\Desktop\resource\images\img1.png",
+            r"C:\Users\EDY\Desktop\resource\images\img2.png",
+            r"C:\Users\EDY\Desktop\resource\images\img3.jpg",
+        ]
+
+
+

@@ -175,6 +175,13 @@ def xhs():
         note_title = "标题示例：这是一个自动发布的笔记标题"
         note_body = "正文示例：这是一个自动发布的笔记正文内容。可以包含多行文本，甚至是一些格式化内容。"
 
+    # 清理 img_urls 列表，去除无效链接
+    urls = []
+    for url in img_urls:
+        if url != "null" and url != None and url != "":
+            urls.append(url)
+    img_urls = urls
+
     print(f"标题：\n{note_title}\n")
     print(f"正文：\n{note_body}\n")
 
