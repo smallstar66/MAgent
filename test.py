@@ -11,10 +11,14 @@ import time
 import json
 import os
 
+
 def func1():
     from xhs_mcp_server.xhsPoster import XiaohongshuPoster
     poster = XiaohongshuPoster(r"D:\test")
     poster.login_1("19330021527")
+    code = input("请输入验证码：")
+    poster.login_2(code)
+
 
 def func2():
     with sync_playwright() as p:
@@ -36,7 +40,22 @@ def func2():
         time.sleep(60)
 
 
+def func3():
+    from xhs_mcp_server.xhsPoster import XiaohongshuPoster
+    poster = XiaohongshuPoster(r"D:\test")
+    # cookies = poster._load_cookies()
+    # print(cookies)
+    # poster.
+
+
+def func4():
+    from xhs_mcp_server.xhsPoster import XiaohongshuPoster
+    poster = XiaohongshuPoster(r"D:\test")
+    # poster.publish_image_note("测试标题", "测试内容", [r"C:\Users\EDY\Desktop\resource\images\img1.png", r"C:\Users\EDY\Desktop\resource\images\img2.png"])
+    poster.publish_vedio_note("测试标题", "测试内容", [r"C:\Users\EDY\Desktop\resource\vedios\vedio1.mp4"])
 
 if __name__ == '__main__':
     # func1()
-    func2()
+    # func2()
+    # func3()
+    func4()
