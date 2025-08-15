@@ -43,6 +43,9 @@ def func2():
 def func3():
     from xhs_mcp_server.xhsPoster import XiaohongshuPoster
     poster = XiaohongshuPoster(r"D:\test")
+    poster.login_1("19330021527")
+    code = input("请输入验证码：")
+    poster.login_2("19330021527",code)
     # cookies = poster._load_cookies()
     # print(cookies)
     # poster.
@@ -51,11 +54,22 @@ def func3():
 def func4():
     from xhs_mcp_server.xhsPoster import XiaohongshuPoster
     poster = XiaohongshuPoster(r"D:\test")
-    # poster.publish_image_note("测试标题", "测试内容", [r"C:\Users\EDY\Desktop\resource\images\img1.png", r"C:\Users\EDY\Desktop\resource\images\img2.png"])
-    poster.publish_vedio_note("测试标题", "测试内容", [r"C:\Users\EDY\Desktop\resource\vedios\vedio1.mp4"])
+    poster.publish_image_note("测试标题", "测试内容", [r"C:\Users\EDY\Desktop\resource\images\img1.png", r"C:\Users\EDY\Desktop\resource\images\img2.png"])
+    # poster.publish_vedio_note("测试标题", "测试内容", [r"C:\Users\EDY\Desktop\resource\vedios\vedio1.mp4"])
+
+def func5():
+    from xhs_mcp_server.http_server import login_1,login_2,publish_image_note,publish_vedio_note
+    # phone = "19330021527"
+    # login_1(phone)
+    # code = input("请输入验证码：")
+    # login_2(phone,code)
+    # publish_image_note("测试标题", "测试内容", [r"C:\Users\EDY\Desktop\resource\images\img1.png",r"C:\Users\EDY\Desktop\resource\images\img2.png"])
+    publish_vedio_note("测试标题", "测试内容", [r"C:\Users\EDY\Desktop\resource\vedios\vedio1.mp4"])
+    pass
 
 if __name__ == '__main__':
     # func1()
     # func2()
     # func3()
-    func4()
+    # func4()
+    func5()
