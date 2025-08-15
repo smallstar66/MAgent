@@ -1,9 +1,10 @@
 import requests
-from flask import Flask, request
+from flask import Flask, request, jsonify
 import os
 import json
 import time
 import tempfile
+import urllib.request
 from playwright.sync_api import sync_playwright
 
 """
@@ -20,6 +21,7 @@ phone = None
 verification_code = None
 cookies_file = os.path.join(path, "xhs_cookies.json")
 
+
 @app.route('/')
 def welcome():
     return "Welcome to Xiaohongshu Http Server!"
@@ -34,8 +36,15 @@ def login_phone():
         res = login_1(phone)
     except Exception as e:
         print(e)
-        return f"服务器端出现错误，登录失败！{e}"
-    return res
+        return jsonify({"msg": f"服务器端出现错误，登录失败！{e}"})
+    return jsonify({"msg": res})
+
+
+@app.route('/logout', methods=['GET'])
+def logout():
+    if os.path.exists(cookies_file):
+        os.remove(cookies_file)
+    return jsonify({"msg": "cooikes已删除，注销成功。"})
 
 
 @app.route('/login_2', methods=['GET'])
@@ -47,14 +56,14 @@ def login_verification_code():
         res = login_2(phone, verification_code)
     except Exception as e:
         print(e)
-        return f"服务器端出现错误，登录失败！{e}"
-    return res
+        return jsonify({"msg": f"服务器端出现错误，登录失败！{e}"})
+    return jsonify({"msg": res})
 
 
 @app.route('/publish_image_note', methods=["GET", "POST"])
 def _publish_image_note():
     """
-        urls:image urls
+        image_urls:image urls
         title: note title
         content: note content
     :return: success
@@ -62,9 +71,9 @@ def _publish_image_note():
     if request.method == 'POST':
         # POST
         data = request.get_json() or {}
-        urls = data.get('urls', [r"C:\Users\EDY\Desktop\resource\images\img1.png",
-                                 r"C:\Users\EDY\Desktop\resource\images\img2.png",
-                                 r"C:\Users\EDY\Desktop\resource\images\img3.jpg", ])
+        urls = data.get('image_urls', [r"C:\Users\EDY\Desktop\resource\images\img1.png",
+                                       r"C:\Users\EDY\Desktop\resource\images\img2.png",
+                                       r"C:\Users\EDY\Desktop\resource\images\img3.jpg", ])
         title = data.get('title', '默认标题')
         content = data.get('content', '默认正文内容!')
     else:
@@ -94,14 +103,14 @@ def _publish_image_note():
         res = publish_image_note(title, content, urls[:18])
     except Exception as e:
         print(e)
-        return f"服务器端出现错误，发布失败！{e}"
-    return res
+        return jsonify({"msg": f"服务器端出现错误，发布失败！{e}"})
+    return jsonify({"msg": res})
 
 
 @app.route('/publish_video_note', methods=["GET", "POST"])
 def _publish_video_note():
     """
-        urls:video urls 只有一个
+        video_url:video url 只有一个
         title: note title
         content: note content
     :return: success
@@ -109,15 +118,17 @@ def _publish_video_note():
     if request.method == 'POST':
         # POST
         data = request.get_json() or {}
-        urls = data.get('urls', [r"C:\Users\EDY\Desktop\resource\videos\video1.mp4"])
+        urls = data.get('video_url', r"C:\Users\EDY\Desktop\resource\videos\video1.mp4")
         title = data.get('title', '默认标题')
         content = data.get('content', '默认正文内容!')
     else:
         # GET
-        urls = [r"C:\Users\EDY\Desktop\resource\videos\video1.mp4"]
+        urls = r"C:\Users\EDY\Desktop\resource\videos\video1.mp4"
         title = "标题示例：这是一个自动发布的笔记标题"
         content = "正文示例：这是一个自动发布的笔记正文内容。可以包含多行文本，甚至是一些格式化内容。"
 
+    if isinstance(urls, str):
+        urls = [urls]
     tmp_urls = []
     for url in urls:
         if url != "null" and url is not None and url != "":
@@ -134,36 +145,46 @@ def _publish_video_note():
         res = publish_video_note(title, content, urls[:1])
     except Exception as e:
         print(e)
-        return f"服务器端出现错误，发布失败！{e}"
-    return res
+        return jsonify({"msg": f"服务器端出现错误，发布失败！{e}"})
+    return jsonify({"msg": res})
 
 
-def download_url(url, if_video=False):
+def download_url(url, num, if_video=False):
     local_dir = os.path.join(path, "temp")
     if not os.path.exists(local_dir):
         os.makedirs(local_dir)
-    num = len(os.listdir(local_dir))
+    # num = len(os.listdir(local_dir))
     file_name = f"img_{num}.png"
     if if_video:
         file_name = f"video_{num}.mp4"
 
     local_path = os.path.join(local_dir, file_name)  # {path}\temp
-    with requests.get(url, stream=True) as r:
-        r.raise_for_status()
+
+    req = urllib.request.Request(url)
+    with urllib.request.urlopen(req, timeout=30) as response:
         with open(local_path, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                f.write(chunk)
+            f.write(response.read())
+    print(f"图片已保存到: {local_path}  {url}")
+
+    # with requests.get(url, stream=True) as r:
+    #     r.raise_for_status()
+    #     with open(local_path, 'wb') as f:
+    #         for chunk in r.iter_content(chunk_size=8192):
+    #             f.write(chunk)
+
     return local_path
 
 
 def download_urls(urls, if_video=False):
     results = []
+    num = 0
     for url in urls:
         if os.path.exists(url):
             results.append(url)
             continue
         if url.startswith("http"):
-            results.append(download_url(url, if_video))
+            results.append(download_url(url, num, if_video))
+            num += 1
     return results
 
 
@@ -250,8 +271,28 @@ def login_1(phone, country_code="+86"):
 def login_2(phone, verification_code):
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)
-        context = browser.new_context()
+        # 加载cookies
+        if is_cookie_valid():
+            context = browser.new_context(storage_state=cookies_file)
+        else:
+            context = browser.new_context()
+
         page = context.new_page()
+
+        # 加载cookies，访问发布页面
+        page.goto('https://www.xiaohongshu.com/explore')
+        time.sleep(3)
+
+        # 检查是否已经登录
+        login_button = page.query_selector('button:has-text(" 登录 ")')
+        if not login_button:
+            print("使用cookies登录成功")
+            context.storage_state(path=cookies_file)
+            time.sleep(1)
+            return "使用cookies登录成功"
+        else:
+            print("无效的cookies，继续登录。")
+
         page.goto('https://www.xiaohongshu.com/explore')
         time.sleep(3)
 
@@ -323,7 +364,7 @@ def publish_image_note(title, content, images):
             return "发布界面: 登录状态不可用，请前往登录。"
 
         page.goto('https://creator.xiaohongshu.com/publish/publish?source=official')
-        time.sleep(2)
+        time.sleep(5)
 
         # 直接跳转到发布界面，不需要点击跳转
         # print("前往发布")
@@ -397,7 +438,7 @@ def publish_video_note(title, content, video):
             return "发布界面: 登录状态不可用，请前往登录。"
 
         page.goto('https://creator.xiaohongshu.com/publish/publish?source=official')
-        time.sleep(2)
+        time.sleep(5)
 
         # 直接跳转到发布界面，不需要点击跳转
         # print("前往发布")
