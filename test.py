@@ -58,13 +58,14 @@ def func4():
     # poster.publish_vedio_note("测试标题", "测试内容", [r"C:\Users\EDY\Desktop\resource\vedios\vedio1.mp4"])
 
 def func5():
-    from xhs_mcp_server.http_server import login_1,login_2,publish_image_note,publish_vedio_note
+    from xhs_mcp_server.http_server import login_1,login_2,publish_image_note,publish_video_note,publish_tags
     # phone = "19330021527"
     # login_1(phone)
     # code = input("请输入验证码：")
     # login_2(phone,code)
     # publish_image_note("测试标题", "测试内容", [r"C:\Users\EDY\Desktop\resource\images\img1.png",r"C:\Users\EDY\Desktop\resource\images\img2.png"])
-    publish_vedio_note("测试标题", "测试内容", [r"C:\Users\EDY\Desktop\resource\vedios\vedio1.mp4"])
+    # publish_vedio_note("测试标题", "测试内容", [r"C:\Users\EDY\Desktop\resource\vedios\vedio1.mp4"])
+    publish_tags("测试标题", "测试内容", [r"C:\Users\EDY\Desktop\resource\images\img1.png",r"C:\Users\EDY\Desktop\resource\images\img2.png"],['#四六级','#学习','#四级','#六级'])
     pass
 
 if __name__ == '__main__':

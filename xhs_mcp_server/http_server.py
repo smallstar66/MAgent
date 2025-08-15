@@ -12,6 +12,7 @@ from playwright.sync_api import sync_playwright
         login_1,login_2: 登录小红书
         publish_image_note: 发布图文笔记
         publish_video_note: 发布视频笔记
+        logout: 登出
 """
 app = Flask(__name__)
 
@@ -66,6 +67,7 @@ def _publish_image_note():
         image_urls:image urls
         title: note title
         content: note content
+        tags: note tags
     :return: success
     """
     if request.method == 'POST':
@@ -76,6 +78,7 @@ def _publish_image_note():
                                        r"C:\Users\EDY\Desktop\resource\images\img3.jpg", ])
         title = data.get('title', '默认标题')
         content = data.get('content', '默认正文内容!')
+        tags = data.get('tags', [])
     else:
         # GET
         urls = [
@@ -85,6 +88,7 @@ def _publish_image_note():
         ]
         title = "标题示例：这是一个自动发布的笔记标题"
         content = "正文示例：这是一个自动发布的笔记正文内容。可以包含多行文本，甚至是一些格式化内容。"
+        tags = ['#我爱学习','#学习爱我']
 
     tmp_urls = []
     for url in urls:
@@ -100,7 +104,7 @@ def _publish_image_note():
     print(urls)
 
     try:
-        res = publish_image_note(title, content, urls[:18])
+        res = publish_image_note(title, content, urls[:18],tags)
     except Exception as e:
         print(e)
         return jsonify({"msg": f"服务器端出现错误，发布失败！{e}"})
@@ -113,6 +117,7 @@ def _publish_video_note():
         video_url:video url 只有一个
         title: note title
         content: note content
+        tags: note tags
     :return: success
     """
     if request.method == 'POST':
@@ -121,11 +126,13 @@ def _publish_video_note():
         urls = data.get('video_url', r"C:\Users\EDY\Desktop\resource\videos\video1.mp4")
         title = data.get('title', '默认标题')
         content = data.get('content', '默认正文内容!')
+        tags = data.get('tags', [])
     else:
         # GET
         urls = r"C:\Users\EDY\Desktop\resource\videos\video1.mp4"
         title = "标题示例：这是一个自动发布的笔记标题"
         content = "正文示例：这是一个自动发布的笔记正文内容。可以包含多行文本，甚至是一些格式化内容。"
+        tags = ['#我爱学习', '#学习爱我']
 
     if isinstance(urls, str):
         urls = [urls]
@@ -142,7 +149,7 @@ def _publish_video_note():
     print(f"---------- 正文 ----------\n{content}\n")
     print(urls)
     try:
-        res = publish_video_note(title, content, urls[:1])
+        res = publish_video_note(title, content, urls[:1],tags)
     except Exception as e:
         print(e)
         return jsonify({"msg": f"服务器端出现错误，发布失败！{e}"})
@@ -337,7 +344,7 @@ def login_2(phone, verification_code):
     return "登录成功！"
 
 
-def publish_image_note(title, content, images):
+def publish_image_note(title, content, images, tags):
     # 创作服务平台首页页面: https://creator.xiaohongshu.com/new/home
     # 发布页面: https://creator.xiaohongshu.com/publish/publish?source=official
     with sync_playwright() as p:
@@ -395,9 +402,19 @@ def publish_image_note(title, content, images):
 
         # 第四步：填写正文内容
         print("填写正文")
-        body_selector = 'div[contenteditable="true"]'
-        page.fill(body_selector, content)
+        content_selector = 'div[contenteditable="true"]'
+        page.fill(content_selector, content)
         time.sleep(2)
+
+        # 填写标签
+        content_input = page.locator(content_selector)
+        content_input.type('\n')
+        for tag in tags:
+            if not tag.startswith('#'):
+                tag = '#' + tag
+            content_input.type(tag)
+            time.sleep(2)
+            page.keyboard.press('Enter')
 
         # 第五步：点击发布按钮
         print("发布笔记")
@@ -411,7 +428,7 @@ def publish_image_note(title, content, images):
     return "图文发布成功！"
 
 
-def publish_video_note(title, content, video):
+def publish_video_note(title, content, video, tags):
     # 创作服务平台首页页面: https://creator.xiaohongshu.com/new/home
     # 发布页面: https://creator.xiaohongshu.com/publish/publish?source=official
     with sync_playwright() as p:
@@ -459,9 +476,19 @@ def publish_video_note(title, content, video):
 
         # 填写正文内容
         print("填写正文")
-        body_selector = 'div[contenteditable="true"]'
-        page.fill(body_selector, content)
+        content_selector = 'div[contenteditable="true"]'
+        page.fill(content_selector, content)
         time.sleep(2)
+
+        # 填写标签
+        content_input = page.locator(content_selector)
+        content_input.type('\n')
+        for tag in tags:
+            if not tag.startswith('#'):
+                tag = '#' + tag
+            content_input.type(tag)
+            time.sleep(2)
+            page.keyboard.press('Enter')
 
         # 点击发布按钮
         print("发布笔记")
