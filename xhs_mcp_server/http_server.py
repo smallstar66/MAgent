@@ -6,6 +6,7 @@ import time
 import tempfile
 import urllib.request
 from playwright.sync_api import sync_playwright
+import re
 
 """
     提供的web api服务:
@@ -20,11 +21,15 @@ app = Flask(__name__)
 path = r"D:\test"
 phone = None
 verification_code = None
-cookies_file = os.path.join(path, "xhs_cookies.json")
+file_name = "xhs_cookies.json"
+phone_pattern = r'^1[3-9]\d{9}$'
 
 
 @app.route('/')
 def welcome():
+    # for i in range(10):
+    #     print(i)
+    #     time.sleep(1)
     return "Welcome to Xiaohongshu Http Server!"
 
 
@@ -41,23 +46,16 @@ def login_phone():
     return jsonify({"msg": res})
 
 
-@app.route('/logout', methods=['GET'])
-def logout():
-    if os.path.exists(cookies_file):
-        os.remove(cookies_file)
-    return jsonify({"msg": "cooikes已删除，注销成功。"})
-
-
 @app.route('/login_2', methods=['GET'])
 def login_verification_code():
-    global verification_code
+    global phone, verification_code
     verification_code = request.args.get('verification_code', '')
 
     try:
         res = login_2(phone, verification_code)
     except Exception as e:
         print(e)
-        return jsonify({"msg": f"服务器端出现错误，登录失败！{e}"})
+        return jsonify({"msg": f"验证码错误 或者 服务器端出现错误，登录失败！请尝试重新输入验证码！ {e}"})
     return jsonify({"msg": res})
 
 
@@ -88,7 +86,7 @@ def _publish_image_note():
         ]
         title = "标题示例：这是一个自动发布的笔记标题"
         content = "正文示例：这是一个自动发布的笔记正文内容。可以包含多行文本，甚至是一些格式化内容。"
-        tags = ['#我爱学习','#学习爱我']
+        tags = ['#我爱学习', '#学习爱我']
 
     tmp_urls = []
     for url in urls:
@@ -103,8 +101,19 @@ def _publish_image_note():
     print(f"---------- 正文 ----------\n{content}\n")
     print(urls)
 
+    # 规范性检查
+    if len(title) > 20:
+        print("标题过长！应≤20字，请重新输入！")
+        return jsonify({"msg": "标题过长！应≤20字，请重新输入！"})
+    if len(content) + sum(len(tag) for tag in tags) > 950:
+        print("正文+标签长度过长！应≤1000字，请重新输入！")
+        return jsonify({"msg": "正文+标签长度过长，应≤1000字，请重新输入！"})
+    if len(urls) > 18:
+        print("图片数量太多！应≤18张，请重新输入！")
+        return jsonify({"msg": "图片数量太多！应≤18张，请重新输入！"})
+
     try:
-        res = publish_image_note(title, content, urls[:18],tags)
+        res = publish_image_note(title[:20], content[:1000], urls[:18], tags)
     except Exception as e:
         print(e)
         return jsonify({"msg": f"服务器端出现错误，发布失败！{e}"})
@@ -142,18 +151,51 @@ def _publish_video_note():
             tmp_urls.append(url)
     urls = tmp_urls
 
-    # 下载图片到本地
+    # 下载到本地
     urls = download_urls(urls, if_video=True)
 
     print(f"---------- 标题 ----------\n{title}\n")
     print(f"---------- 正文 ----------\n{content}\n")
     print(urls)
+
+    # 规范性检查
+    if len(title) > 20:
+        print("标题过长！应≤20字，请重新输入！")
+        return jsonify({"msg": "标题过长！应≤20字，请重新输入！"})
+    if len(content) + sum(len(tag) for tag in tags) > 950:
+        print("正文+标签长度过长！应≤1000字，请重新输入！")
+        return jsonify({"msg": "正文+标签长度过长，应≤1000字，请重新输入！"})
+
     try:
-        res = publish_video_note(title, content, urls[:1],tags)
+        res = publish_video_note(title, content, urls[:1], tags)
     except Exception as e:
         print(e)
         return jsonify({"msg": f"服务器端出现错误，发布失败！{e}"})
     return jsonify({"msg": res})
+
+
+@app.route('/logout', methods=['GET'])
+def logout():
+    phone_tmp = request.args.get('phone', '19330021527')
+    cookies_file = os.path.join(path, f"{phone_tmp}_{file_name}")
+
+    global phone
+    if phone_tmp == phone:
+        phone = None
+
+    if os.path.exists(cookies_file):
+        os.remove(cookies_file)
+    print(f"{phone_tmp} cooikes已删除，注销成功。")
+    return jsonify({"msg": f"{phone_tmp} cooikes已删除，注销成功。"})
+
+
+@app.route('/check', methods=['GET'])
+def check_phone():
+    if phone is None:
+        print("当前无登录，请先登录！")
+        return jsonify({"msg": "当前无登录，请先登录！"})
+    print(f"当前登录为：{phone}！")
+    return jsonify({"msg": f"当前登录为：{phone}！"})
 
 
 def download_url(url, num, if_video=False):
@@ -190,12 +232,16 @@ def download_urls(urls, if_video=False):
             results.append(url)
             continue
         if url.startswith("http"):
-            results.append(download_url(url, num, if_video))
+            try:
+                tmp_path = download_url(url, num, if_video)
+            except:
+                continue
+            results.append(tmp_path)
             num += 1
     return results
 
 
-def is_cookie_valid():
+def is_cookie_valid(cookies_file):
     if not os.path.exists(cookies_file):
         print("cookies文件不存在")
         return False
@@ -222,11 +268,17 @@ def login_1(phone, country_code="+86"):
     :param country_code:
     :return:
     """
+    if not bool(re.match(phone_pattern, phone)):
+        print("手机号错误")
+        return "手机号错误"
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)
 
+        cookies_file = os.path.join(path, f"{phone}_{file_name}")
+
         # 加载cookies
-        if is_cookie_valid():
+        if is_cookie_valid(cookies_file):
             context = browser.new_context(storage_state=cookies_file)
         else:
             context = browser.new_context()
@@ -278,8 +330,10 @@ def login_1(phone, country_code="+86"):
 def login_2(phone, verification_code):
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)
+
+        cookies_file = os.path.join(path, f"{phone}_{file_name}")
         # 加载cookies
-        if is_cookie_valid():
+        if is_cookie_valid(cookies_file):
             context = browser.new_context(storage_state=cookies_file)
         else:
             context = browser.new_context()
@@ -349,8 +403,11 @@ def publish_image_note(title, content, images, tags):
     # 发布页面: https://creator.xiaohongshu.com/publish/publish?source=official
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)
+
+        global phone
+        cookies_file = os.path.join(path, f"{phone}_{file_name}")
         # 加载cookies
-        if is_cookie_valid():
+        if is_cookie_valid(cookies_file):
             context = browser.new_context(storage_state=cookies_file)
         else:
             context = browser.new_context()
@@ -408,6 +465,8 @@ def publish_image_note(title, content, images, tags):
 
         # 填写标签
         content_input = page.locator(content_selector)
+        content_input.focus()
+        page.keyboard.press('Control+End')
         content_input.type('\n')
         for tag in tags:
             if not tag.startswith('#'):
@@ -433,8 +492,11 @@ def publish_video_note(title, content, video, tags):
     # 发布页面: https://creator.xiaohongshu.com/publish/publish?source=official
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)
+
+        global phone
+        cookies_file = os.path.join(path, f"{phone}_{file_name}")
         # 加载cookies
-        if is_cookie_valid():
+        if is_cookie_valid(cookies_file):
             context = browser.new_context(storage_state=cookies_file)
         else:
             context = browser.new_context()
@@ -482,6 +544,8 @@ def publish_video_note(title, content, video, tags):
 
         # 填写标签
         content_input = page.locator(content_selector)
+        content_input.focus()
+        page.keyboard.press('Control+End')
         content_input.type('\n')
         for tag in tags:
             if not tag.startswith('#'):
